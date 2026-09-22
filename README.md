@@ -12,13 +12,10 @@ viewer. The GUI and CLI use the same connection engine.
 > responsible for protecting your credentials, verifying connection details, maintaining
 > backups, and complying with all applicable rules. The software is provided "as is," without
 > warranties or guarantees of availability, security, compatibility, or fitness for a particular
-> purpose. To the maximum extent permitted by law, the project’s authors and contributors are not
+> purpose. To the maximum extent permitted by law, the project's authors and contributors are not
 > liable for account restrictions, data loss, interrupted work, security incidents, or other
 > damages arising from its use. Stop using the tool and contact ECBE technical support if its
 > behaviour differs from official instructions.
-
-This notice does not grant authorization, override TMU policy, or guarantee that every liability
-limitation is enforceable.
 
 ## What it automates
 
@@ -60,14 +57,13 @@ Python.
 
 ```powershell
 python -m venv .venv
-python -m pip install uv
-uv sync --locked --all-extras
-uv run pytest
-uv run ecbe-connect --help
-uv run ecbe-connect-gui
+.venv\Scripts\python -m pip install -e ".[dev]"
+.venv\Scripts\pytest
+.venv\Scripts\ecbe-connect --help
+.venv\Scripts\ecbe-connect-gui
 ```
 
-The checked-in lockfile pins hashes for reproducible development and release environments.
+On macOS/Linux, use `.venv/bin/python`, `.venv/bin/pytest`, and the corresponding entry points.
 
 ## Project documentation
 
@@ -81,3 +77,4 @@ The checked-in lockfile pins hashes for reproducible development and release env
 
 Project-owned code is available under the [MIT License](LICENSE). Third-party components retain
 their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+
