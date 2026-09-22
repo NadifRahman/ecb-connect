@@ -1,0 +1,87 @@
+name: Unsigned beta release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows-x64
+          - os: macos-13
+            label: macos-intel
+          - os: macos-14
+            label: macos-apple-silicon
+          - os: ubuntu-latest
+            label: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --all-extras
+      - run: uv run python scripts/build_release.py
+      - if: runner.os == 'Windows'
+        run: choco install innosetup --no-progress -y
+      - if: runner.os == 'Windows'
+        shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" packaging/windows/ecbe-connect.iss'
+      - if: runner.os == 'Windows'
+        run: uv run python scripts/build_release.py --checksums-only
+      - uses: anchore/sbom-action@v0
+        with:
+          path: release
+          format: cyclonedx-json
+          output-file: release/sbom-${{ matrix.label }}.cdx.json
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: release/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.label }}
+          path: release/*
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Consolidate checksums
+        run: sha256sum artifacts/* | grep -v SHA256SUMS > artifacts/SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          prerelease: true
+          generate_release_notes: true
+          body: |
+            **Unofficial software — use at your own risk.** ECBE Connect is an independent student
+            project and is not affiliated with, endorsed by, sponsored by, or supported by Toronto
+            Metropolitan University, the Department of Electrical, Computer, and Biomedical
+            Engineering, or RealVNC Limited. Use this software only with an account and systems you
+            are authorized to access, and only in accordance with applicable university policies
+            and third-party terms. You are responsible for protecting your credentials, verifying
+            connection details, maintaining backups, and complying with all applicable rules. The
+            software is provided “as is,” without warranties or guarantees of availability,
+            security, compatibility, or fitness for a particular purpose. To the maximum extent
+            permitted by law, the project’s authors and contributors are not liable for account
+            restrictions, data loss, interrupted work, security incidents, or other damages arising
+            from its use. Stop using the tool and contact ECBE technical support if its behaviour
+            differs from official instructions.
+
+            This disclaimer does not grant authorization, override TMU policy, or guarantee that
+            every liability limitation is enforceable.
+
+            These beta packages are unsigned. Verify `SHA256SUMS.txt` and the GitHub build
+            attestation before running them. Windows SmartScreen and macOS Gatekeeper may warn.
+          files: artifacts/*
