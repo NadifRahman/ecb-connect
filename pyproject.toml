@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ecbe-connect"
-version = "0.1.0"
+version = "0.1.1"
 description = "Unofficial TMU ECBE SSH and VNC connection helper"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -61,4 +61,3 @@ packages = ["ecbe_connect"]
 
 [tool.bandit]
 exclude_dirs = ["tests"]
-

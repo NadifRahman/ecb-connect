@@ -132,26 +132,35 @@ class GatewayConnector:
         broker: CredentialBroker,
     ) -> SSHGateway:
         await self.host_keys.ensure_trusted(host, 22, prompts)
-        try:
-            connection = await asyncssh.connect(
-                host,
-                port=22,
-                username=username,
-                client_factory=lambda: _ECBEClient(broker),
-                known_hosts=str(self.host_keys.path),
-                preferred_auth=("keyboard-interactive", "password"),
-                client_keys=[],
-                agent_path=None,
-                config=None,
-                keepalive_interval=30,
-                keepalive_count_max=3,
-                login_timeout=90,
-            )
-        except asyncssh.PermissionDenied as exc:
-            raise AuthenticationFailed("ECBE authentication was rejected.") from exc
-        except (asyncssh.Error, OSError) as exc:
-            raise AuthenticationFailed("Could not establish a secure connection to ECBE.") from exc
-        return SSHGateway(connection=connection, prompts=prompts, broker=broker)
+        retried_saved_password = False
+        while True:
+            try:
+                connection = await asyncssh.connect(
+                    host,
+                    port=22,
+                    username=username,
+                    client_factory=lambda: _ECBEClient(broker),
+                    known_hosts=str(self.host_keys.path),
+                    preferred_auth=("keyboard-interactive", "password"),
+                    client_keys=[],
+                    agent_path=None,
+                    config=None,
+                    keepalive_interval=30,
+                    keepalive_count_max=3,
+                    login_timeout=90,
+                )
+            except asyncssh.PermissionDenied as exc:
+                used_saved_password = broker.reject_authentication()
+                if used_saved_password and not retried_saved_password:
+                    retried_saved_password = True
+                    continue
+                raise AuthenticationFailed("ECBE authentication was rejected.") from exc
+            except (asyncssh.Error, OSError) as exc:
+                raise AuthenticationFailed(
+                    "Could not establish a secure connection to ECBE."
+                ) from exc
+            broker.confirm_authentication()
+            return SSHGateway(connection=connection, prompts=prompts, broker=broker)
 
 
 def _command_allowed(command: str) -> bool:

@@ -36,8 +36,27 @@ async def test_password_reused_in_session_and_saved_only_when_requested() -> Non
     assert await broker.answer(PromptKind.ECBE_PASSWORD, "Password:") == "ecbe-secret"
     assert await broker.answer(PromptKind.ECBE_PASSWORD, "Password:") == "ecbe-secret"
     assert prompts.requested == [PromptKind.ECBE_PASSWORD]
+    assert store.get_password("student") is None
+    broker.confirm_authentication()
     assert store.get_password("student") == "ecbe-secret"
     broker.clear_session()
+
+
+@pytest.mark.asyncio
+async def test_rejected_saved_password_is_removed_and_replaced_after_success() -> None:
+    prompts = Prompts(["correct-password"])
+    store = MemoryCredentialStore()
+    store.set_password("student", "stale-password")
+    broker = CredentialBroker(prompts, store, "student", remember_password=True)
+
+    assert await broker.answer(PromptKind.ECBE_PASSWORD, "Password:") == "stale-password"
+    assert broker.reject_authentication()
+    assert store.get_password("student") is None
+    assert await broker.answer(PromptKind.ECBE_PASSWORD, "Password:") == "correct-password"
+    assert store.get_password("student") is None
+
+    broker.confirm_authentication()
+    assert store.get_password("student") == "correct-password"
 
 
 @pytest.mark.asyncio
@@ -83,4 +102,3 @@ async def test_attempts_are_bounded() -> None:
     await broker.answer(PromptKind.MFA_CODE, "Verification code:")
     with pytest.raises(UserCancelled):
         await broker.answer(PromptKind.MFA_CODE, "Verification code:")
-

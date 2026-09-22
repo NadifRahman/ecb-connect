@@ -1,5 +1,5 @@
 #define AppName "ECBE Connect - Unofficial"
-#define AppVersion "0.1.0"
+#define AppVersion "0.1.1"
 
 [Setup]
 AppId={{C31CE617-ECBE-4D43-9721-AB22CBE05C01}
@@ -38,4 +38,3 @@ Name: desktopicon; Description: "Create a desktop shortcut"; GroupDescription: "
 
 [Run]
 Filename: "{app}\ECBE Connect.exe"; Description: "Open ECBE Connect"; Flags: nowait postinstall skipifsilent
-

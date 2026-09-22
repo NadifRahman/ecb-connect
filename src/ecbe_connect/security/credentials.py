@@ -69,13 +69,37 @@ class CredentialBroker:
         self.remember_password = remember_password
         self.max_attempts = max_attempts
         self._session_password: str | None = None
+        self._password_from_store = False
+        self._saved_password_rejected = False
         self._vnc_password: str | None = None
         self._counts: dict[PromptKind, int] = {}
 
     def clear_session(self) -> None:
         self._session_password = None
+        self._password_from_store = False
+        self._saved_password_rejected = False
         self._vnc_password = None
         self._counts.clear()
+
+    def reject_authentication(self) -> bool:
+        """Clear a rejected password and report whether it came from the keychain."""
+        saved_password_was_used = self._password_from_store
+        self._session_password = None
+        self._password_from_store = False
+        self._saved_password_rejected = saved_password_was_used
+        if saved_password_was_used:
+            self.store.delete_password(self.username)
+        return saved_password_was_used
+
+    def confirm_authentication(self) -> None:
+        """Persist a prompted password only after the server accepts authentication."""
+        if (
+            self.remember_password
+            and self._session_password is not None
+            and not self._password_from_store
+        ):
+            self.store.set_password(self.username, self._session_password)
+        self._saved_password_rejected = False
 
     async def answer(self, kind: PromptKind, prompt: str) -> str:
         count = self._counts.get(kind, 0) + 1
@@ -90,13 +114,18 @@ class CredentialBroker:
                 saved = self.store.get_password(self.username)
                 if saved:
                     self._session_password = saved
+                    self._password_from_store = True
                     return saved
-            value = await self.provider.request_secret(kind, "ECBE network password")
+            label = (
+                "Saved password was rejected. Enter your ECBE network password"
+                if self._saved_password_rejected
+                else "ECBE network password"
+            )
+            value = await self.provider.request_secret(kind, label)
             if not value:
                 raise UserCancelled("Password entry was cancelled.")
             self._session_password = value
-            if self.remember_password:
-                self.store.set_password(self.username, value)
+            self._password_from_store = False
             return value
 
         if kind == PromptKind.MFA_CODE:

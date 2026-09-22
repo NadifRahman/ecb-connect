@@ -95,7 +95,7 @@ def build() -> Path:
 
     system = platform.system().lower()
     machine = platform.machine().lower().replace("amd64", "x86_64")
-    stem = f"ecbe-connect-0.1.0-{system}-{machine}"
+    stem = f"ecbe-connect-0.1.1-{system}-{machine}"
     gui_output = DIST / ("ECBE Connect.app" if system == "darwin" else "ECBE Connect")
     cli_name = "ecbe-connect-cli.exe" if system == "windows" else "ecbe-connect-cli"
     cli_output = DIST / cli_name
