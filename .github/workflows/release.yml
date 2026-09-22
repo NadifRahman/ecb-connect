@@ -18,9 +18,9 @@ jobs:
         include:
           - os: windows-latest
             label: windows-x64
-          - os: macos-13
+          - os: macos-15-intel
             label: macos-intel
-          - os: macos-14
+          - os: macos-15
             label: macos-apple-silicon
           - os: ubuntu-latest
             label: linux-x64
@@ -28,6 +28,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - if: runner.os == 'Linux'
+        name: Install Linux GUI runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y libegl1
       - run: uv sync --locked --all-extras
       - run: uv run python scripts/build_release.py
       - if: runner.os == 'Windows'
@@ -43,6 +48,7 @@ jobs:
           format: cyclonedx-json
           output-file: release/sbom-${{ matrix.label }}.cdx.json
       - uses: actions/attest-build-provenance@v2
+        if: github.event.repository.visibility == 'public'
         with:
           subject-path: release/*
       - uses: actions/upload-artifact@v4
