@@ -47,7 +47,7 @@ jobs:
           path: release
           format: cyclonedx-json
           output-file: release/sbom-${{ matrix.label }}.cdx.json
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         if: github.event.repository.visibility == 'public'
         with:
           subject-path: release/*
